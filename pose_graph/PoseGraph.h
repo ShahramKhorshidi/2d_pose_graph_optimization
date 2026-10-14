@@ -38,7 +38,7 @@ struct LinearSystem
     Eigen::SimplicialLLT<Eigen::SparseMatrix<double>> solver;
 
     /** @brief Error tolerance and maximum number of iteraton for convergance. */
-    double tolerance = 0.001;
+    double tolerance = 0.00001;
     uint maxIter = 100;
 
     LinearSystem(uint dim):dimension(dim),x(dim), b(dim), dx(dim), H(dim, dim)
@@ -60,8 +60,8 @@ struct LinearSystem
  * The graph is optimized by calling optimizeGraph(fromNode, toNode), which optimizes the graph
  * iteratively between two given nodes.
  * @todo ---------------------------------------------------------------------------------------
- *## Tuning the inforamation matrix.
- *## Later, we want to assign an information matrix with each node.
+ *## Tuning the information matrix.
+ *## Later, we want to assign an information matrix to each constraint.
  * ---------------------------------------------------------------------------------------------
  */
 class PoseGraph
@@ -86,8 +86,8 @@ private:
     Pose2D correctingPose;
 
     /**
-     * @brief omega is the constant information Matrix for all nodes.
-     * @todo Later, we want to assign an information matrix with each node.
+     * @brief omega is the constant information matrix used for all constraints.
+     * @todo Later, we want to assign an information matrix to each constraint.
      */
     Eigen::Matrix3d omega;
 
