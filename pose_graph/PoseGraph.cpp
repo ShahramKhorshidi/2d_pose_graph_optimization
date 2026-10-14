@@ -17,12 +17,14 @@ PoseGraph::PoseGraph()
 
 PoseGraph::PoseGraph(const Pose2D &priorPose)
 {
-    currentNode.nodeId = nodesCount;
-    currentNode.nodePose = priorPose;
-    currentNode.initPose = priorPose;
-    graphNodes.push_back(currentNode);
-    nodesCount++;
     init();
+    addPriorNode(priorPose);
+}
+
+PoseGraph::PoseGraph(const Pose2D &priorPose, const Eigen::Matrix3d& covariance)
+{
+    init();
+    addPriorNode(priorPose, covariance);
 }
 
 PoseGraph::~PoseGraph()
@@ -32,23 +34,33 @@ PoseGraph::~PoseGraph()
 
 void PoseGraph::init()
 {
-    /** @todo: Tuning the covariance matrix. */
-    Eigen::Matrix3d sigma = Eigen::Matrix3d::Zero();
-    sigma(0, 0) = 0.15 * 0.15; // std_x = 0.15 m
-    sigma(1, 1) = 0.15 * 0.15; // std_y = 0.15 m
-    sigma(2, 2) = 0.2 * 0.2;   // std_theta = 0.2 rad
-    omega = sigma.inverse();
+    defaultNodeCovariance = Eigen::Matrix3d::Zero();
+    defaultNodeCovariance(0, 0) = 0.15 * 0.15; // std_x = 0.15 m
+    defaultNodeCovariance(1, 1) = 0.15 * 0.15; // std_y = 0.15 m
+    defaultNodeCovariance(2, 2) = 0.2 * 0.2;   // std_theta = 0.2 rad
+
+    /** @todo: Assign a separate covariance to each constraint. */
+    Eigen::Matrix3d constraintCovariance = defaultNodeCovariance;
+    omega = constraintCovariance.inverse();
     correctingPose = Pose2D(0, 0, 0);
     graphOptimized = false;
 }
 
 void PoseGraph::addPriorNode(const Pose2D& priorPose)
 {
+    addPriorNode(priorPose, defaultNodeCovariance);
+}
+
+void PoseGraph::addPriorNode(
+        const Pose2D& priorPose,
+        const Eigen::Matrix3d& covariance)
+{
     if (graphNodes.empty())
     {
         currentNode.nodeId = nodesCount;
         currentNode.nodePose = priorPose;
         currentNode.initPose = priorPose;
+        currentNode.setCovariance(covariance);
         graphNodes.push_back(currentNode);
         nodesCount++;
     }
@@ -56,10 +68,18 @@ void PoseGraph::addPriorNode(const Pose2D& priorPose)
 
 void PoseGraph::addOdomNode(const Pose2D &odomPose)
 {
+    addOdomNode(odomPose, defaultNodeCovariance);
+}
+
+void PoseGraph::addOdomNode(
+        const Pose2D &odomPose,
+        const Eigen::Matrix3d& covariance)
+{
     currentNode.nodeId = nodesCount;
     // Odometry poses are corrected by the error we get for the last pose, after optimization.
     currentNode.nodePose = odomPose;
     currentNode.initPose = currentNode.nodePose;
+    currentNode.setCovariance(covariance);
 
     graphNodes.push_back(currentNode);
     nodesCount++;
@@ -70,6 +90,21 @@ void PoseGraph::addOdomNode(const Pose2D &odomPose)
         currentEdge.addOdomConstraint(graphNodes[i-2], graphNodes[i-1]);
         graphConstraints.push_back(currentEdge);
     }
+}
+
+void PoseGraph::setNodeCovariance(uint nodeId, const Eigen::Matrix3d& covariance)
+{
+    graphNodes.at(nodeId).setCovariance(covariance);
+}
+
+Eigen::Matrix3d PoseGraph::getNodeCovariance(uint nodeId) const
+{
+    return graphNodes.at(nodeId).getCovariance();
+}
+
+Eigen::Matrix3d PoseGraph::getDefaultNodeCovariance() const
+{
+    return defaultNodeCovariance;
 }
 
 void PoseGraph::connectLoopClosingNodes(uint nodeId1, uint nodeId2, const Pose2D &observation)

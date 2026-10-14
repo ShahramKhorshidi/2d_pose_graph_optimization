@@ -91,19 +91,40 @@ private:
      */
     Eigen::Matrix3d omega;
 
+    /** @brief Covariance assigned to a node when no covariance is provided. */
+    Eigen::Matrix3d defaultNodeCovariance;
+
 public:
     PoseGraph();
 
     /** @brief Constructor with adding the first pose as the prior node. */
     PoseGraph(const Pose2D& priorPose);
 
+    /** @brief Constructor with a covariance for the first pose. */
+    PoseGraph(const Pose2D& priorPose, const Eigen::Matrix3d& covariance);
+
     ~PoseGraph();
 
     /** @brief Adds the first node to the graph if it is empty. */
     void addPriorNode(const Pose2D& priorPose);
 
+    /** @brief Adds the first node with its pose covariance if the graph is empty. */
+    void addPriorNode(const Pose2D& priorPose, const Eigen::Matrix3d& covariance);
+
     /** @brief Adds a node and a constraint to the graph from the odometry data. */
     void addOdomNode(const Pose2D &odomPose);
+
+    /** @brief Adds an odometry node with its pose covariance. */
+    void addOdomNode(const Pose2D &odomPose, const Eigen::Matrix3d& covariance);
+
+    /** @brief Sets the stored pose covariance of an existing node. */
+    void setNodeCovariance(uint nodeId, const Eigen::Matrix3d& covariance);
+
+    /** @brief Returns the stored pose covariance of an existing node. */
+    Eigen::Matrix3d getNodeCovariance(uint nodeId) const;
+
+    /** @brief Returns the covariance used when a node is added without one. */
+    Eigen::Matrix3d getDefaultNodeCovariance() const;
 
     /** @brief Adds a node and a constraint to the graph from the loop closing. */
     void connectLoopClosingNodes(uint nodeId1, uint nodeId2, const Pose2D &observation);

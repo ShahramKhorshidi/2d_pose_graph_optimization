@@ -112,17 +112,11 @@ $$
        = \mathrm{diag}(44.44,44.44,25).
 $$
 
-This covariance is defined in `PoseGraph::init()` and represents the uncertainty of a relative-pose measurement. It is not a covariance assigned to each graph node. Although `GraphConstraint` currently declares an `omega` member, the optimizer assembles the system using the common `PoseGraph::omega`; therefore, constraint-specific covariance is not active in the current implementation.
+This constraint covariance is defined in `PoseGraph::init()` and represents the uncertainty of a relative-pose measurement. The same numerical matrix is used as the default covariance of a new node, but the stored node covariance and the constraint covariance are separate quantities. Although `GraphConstraint` currently declares an `omega` member, the optimizer assembles the system using the common `PoseGraph::omega`; therefore, constraint-specific covariance is not active in the current implementation.
 
 ### Node Pose Covariance
 
-The covariance of an optimized node is different from the measurement covariance. Around the optimized solution, the approximate covariance of the complete trajectory is
-
-$$
-P \approx H^{-1},
-$$
-
-after fixing the reference pose. The marginal covariance of node $i$ is the corresponding $3\times3$ diagonal block
+Each `GraphNode` stores a $3\times3$ covariance $P_i$ for the pose components $[x_i,y_i,\theta_i]^T$:
 
 $$
 P_i =
@@ -133,7 +127,40 @@ P_i =
 \end{bmatrix}.
 $$
 
-The diagonal entries contain the marginal variances of $x_i$, $y_i$ and $\theta_i$, while the off-diagonal entries contain their correlations. The current code does not compute or expose $P_i$: `GraphNode` has no covariance member and `PoseGraph::getInformationMatrix()` is still empty.
+The diagonal entries contain the variances of $x_i$, $y_i$ and $\theta_i$, while the off-diagonal entries contain their cross-covariances. A covariance can be assigned whenever a node is added:
+
+```cpp
+Eigen::Matrix3d nodeCovariance = Eigen::Matrix3d::Zero();
+nodeCovariance(0, 0) = 0.10 * 0.10; // x variance in m^2
+nodeCovariance(1, 1) = 0.10 * 0.10; // y variance in m^2
+nodeCovariance(2, 2) = 0.05 * 0.05; // theta variance in rad^2
+
+poseGraph.addOdomNode(odomPose, nodeCovariance);
+```
+
+The prior node accepts a covariance in the same way with `addPriorNode(priorPose, nodeCovariance)` or `PoseGraph poseGraph(priorPose, nodeCovariance)`. When the covariance argument is omitted, as in the example program, the node receives the common default
+
+$$
+P_{\mathrm{default}} =
+\mathrm{diag}\left((0.15\,\mathrm{m})^2,
+                    (0.15\,\mathrm{m})^2,
+                    (0.2\,\mathrm{rad})^2\right).
+$$
+
+The covariance of an existing node can be changed and read using its node ID:
+
+```cpp
+poseGraph.setNodeCovariance(nodeId, nodeCovariance);
+Eigen::Matrix3d savedCovariance = poseGraph.getNodeCovariance(nodeId);
+```
+
+The stored matrix represents covariance supplied by the user or another estimator. It is not automatically updated during graph optimization and does not replace the constraint information matrix $\Omega$. Around an optimized solution, the approximate covariance of the complete trajectory would be
+
+$$
+P \approx H^{-1},
+$$
+
+after fixing the reference pose. The posterior marginal covariance of node $i$ would be its corresponding $3\times3$ diagonal block. This automatic marginal-covariance calculation is not implemented yet because `PoseGraph::getInformationMatrix()` is still empty.
 
 ### Linearization and Sparse System
 
