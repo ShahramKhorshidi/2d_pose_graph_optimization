@@ -84,6 +84,7 @@ e_{ij} = z_{ij}-h_{ij}(c_i,c_j).
 $$
 
 The angular part of the relative pose and its error are normalized to $[-\pi,\pi)$. Odometry constraints connect consecutive poses and their observations are obtained from the initial odometry trajectory. A loop closing constraint connects two poses that observe the same place and introduces an additional measured relative pose.
+<img width="1482" height="1062" alt="Mathematical graph with revised node labels" src="https://github.com/user-attachments/assets/63d23fc5-dbf6-4ee9-b4b0-0c4cdd735bde" />
 
 ### Constraint Covariance
 
