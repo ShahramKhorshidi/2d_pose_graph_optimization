@@ -50,6 +50,18 @@ The animation speed is controlled by `trajectoryDelayMs` near the beginning of `
 
 ## Framework
 
+### Code Structure
+
+- `utils/Pose2D` implements 2D pose composition, relative transformations and angle normalization.
+
+- `pose_graph/GraphNode` stores the node ID, the current pose and the initial pose.
+
+- `pose_graph/GraphConstraint` stores the connected node IDs and relative-pose observation, and computes $e_{ij}$, $A_{ij}$ and $B_{ij}$.
+
+- `pose_graph/PoseGraph` adds nodes and constraints, assembles the linear system, fixes the first pose, solves for $\Delta x$, stores the final sparse information matrix and computes node marginal covariances.
+
+- `example/main.cpp` reads the HSR trajectory, inserts the loop closing constraint between nodes 9 and 261, runs the optimization and displays the result.
+
 ### Pose Graph
 
 The pose graph contains nodes connected by odometry and loop closing constraints. Each node stores a global 2D robot pose
@@ -231,18 +243,6 @@ H\Delta x=b, \qquad x\leftarrow x+\Delta x.
 $$
 
 The first pose is fixed to remove the global reference-frame ambiguity. Because an edge only involves two poses, most blocks in $H$ are zero. The current implementation fills the required blocks in a dense temporary matrix, converts it to an Eigen sparse matrix, and solves the system using sparse Cholesky factorization. The poses and constraints are updated and relinearized until $\lVert\Delta x\rVert$ is smaller than the tolerance.
-
-### Code Structure
-
-- `utils/Pose2D` implements 2D pose composition, relative transformations and angle normalization.
-
-- `pose_graph/GraphNode` stores the node ID, the current pose and the initial pose.
-
-- `pose_graph/GraphConstraint` stores the connected node IDs and relative-pose observation, and computes $e_{ij}$, $A_{ij}$ and $B_{ij}$.
-
-- `pose_graph/PoseGraph` adds nodes and constraints, assembles the linear system, fixes the first pose, solves for $\Delta x$, stores the final sparse information matrix and computes node marginal covariances.
-
-- `example/main.cpp` reads the HSR trajectory, inserts the loop closing constraint between nodes 9 and 261, runs the optimization and displays the result.
 
 ## References
 
