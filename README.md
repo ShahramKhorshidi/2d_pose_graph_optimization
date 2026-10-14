@@ -54,16 +54,6 @@ The animation speed is controlled by `trajectoryDelayMs` near the beginning of `
        width="900">
 </p>
 
-To create the GIF again, install `ffmpeg` and run:
-
-```
-sudo apt install ffmpeg
-QT_QPA_PLATFORM=offscreen ./build/example/RobotVisualization \
-    --save-gif docs/robot_visualization.gif
-```
-
-The GIF recording settings are near the beginning of `example/main.cpp`. `gifFrameWidth` and `gifFrameHeight` set the saved frame size and aspect ratio. The recording view automatically fits the complete trajectory. `gifSceneMargin` adds space around it and can be increased if an annotation or an optimized pose is too close to the frame border.
-
 ## Framework
 
 ### Code Structure
