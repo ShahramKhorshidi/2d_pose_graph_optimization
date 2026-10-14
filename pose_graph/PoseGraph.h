@@ -94,6 +94,9 @@ private:
     /** @brief Covariance assigned to a node when no covariance is provided. */
     Eigen::Matrix3d defaultNodeCovariance;
 
+    /** @brief Information matrix at the final linearization of the last optimization. */
+    Eigen::SparseMatrix<double> informationMatrix;
+
 public:
     PoseGraph();
 
@@ -126,6 +129,12 @@ public:
     /** @brief Returns the covariance used when a node is added without one. */
     Eigen::Matrix3d getDefaultNodeCovariance() const;
 
+    /** @brief Returns the final information matrix from the last optimization. */
+    const Eigen::SparseMatrix<double>& getInformationMatrix() const;
+
+    /** @brief Returns the posterior marginal covariance of an optimized node. */
+    Eigen::Matrix3d getMarginalCovariance(uint nodeId) const;
+
     /** @brief Adds a node and a constraint to the graph from the loop closing. */
     void connectLoopClosingNodes(uint nodeId1, uint nodeId2, const Pose2D &observation);
 
@@ -149,11 +158,14 @@ private:
     /** @brief Updates the graph constraints. */
     void updateGraphConstraints();
 
-    /** @todo
-     * @brief Recovers the information matrix H of the computed mean of state x,
-     * from the sparse matrix used in the linear solver.
-     */
-    void getInformationMatrix(Eigen::SparseMatrix<double> HSparse);
+    /** @brief Builds H and b at the current graph configuration. */
+    void buildLinearSystem(LinearSystem& ls, uint nodeId1, uint nodeId2);
+
+    /** @brief Computes and stores the marginal covariance of each optimized node. */
+    void updateMarginalCovariances(
+            LinearSystem& ls,
+            uint nodeId1,
+            uint nodeId2);
 };
 
 #endif

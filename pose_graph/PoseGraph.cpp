@@ -1,5 +1,6 @@
 #include <iostream>
 #include <chrono>
+#include <stdexcept>
 #include "PoseGraph.h"
 #include<eigen3/Eigen/SparseCholesky>
 
@@ -61,6 +62,7 @@ void PoseGraph::addPriorNode(
         currentNode.nodePose = priorPose;
         currentNode.initPose = priorPose;
         currentNode.setCovariance(covariance);
+        currentNode.clearMarginalCovariance();
         graphNodes.push_back(currentNode);
         nodesCount++;
     }
@@ -80,6 +82,7 @@ void PoseGraph::addOdomNode(
     currentNode.nodePose = odomPose;
     currentNode.initPose = currentNode.nodePose;
     currentNode.setCovariance(covariance);
+    currentNode.clearMarginalCovariance();
 
     graphNodes.push_back(currentNode);
     nodesCount++;
@@ -105,6 +108,22 @@ Eigen::Matrix3d PoseGraph::getNodeCovariance(uint nodeId) const
 Eigen::Matrix3d PoseGraph::getDefaultNodeCovariance() const
 {
     return defaultNodeCovariance;
+}
+
+const Eigen::SparseMatrix<double>& PoseGraph::getInformationMatrix() const
+{
+    return informationMatrix;
+}
+
+Eigen::Matrix3d PoseGraph::getMarginalCovariance(uint nodeId) const
+{
+    const GraphNode& node = graphNodes.at(nodeId);
+    if (!node.hasMarginalCovariance())
+    {
+        throw std::logic_error(
+                "Marginal covariance is available only after the node has been optimized.");
+    }
+    return node.getMarginalCovariance();
 }
 
 void PoseGraph::connectLoopClosingNodes(uint nodeId1, uint nodeId2, const Pose2D &observation)
@@ -139,27 +158,7 @@ void PoseGraph::optimizeGraph(const GraphNode &node1, const GraphNode &node2)
     while(!converged)
     {
         /** @brief Linearizing the least-squares problem. */
-        ls.H = Eigen::MatrixXd::Zero(dim, dim);
-        ls.b = Eigen::VectorXd::Zero(dim);
-        for (auto& edge : graphConstraints)
-        {
-            // We only optimize the graph between two loop closing nodes.
-            if (edge.i >= node1.nodeId && edge.i <= node2.nodeId)
-            {
-                edge.linearizeConstraint();
-                uint i = edge.i-node1.nodeId;
-                uint j = edge.j-node1.nodeId;
-                ls.H.block<3, 3>(3*i, 3*i) += edge.getAij().transpose() * omega * edge.getAij();
-                ls.H.block<3, 3>(3*i, 3*j) += edge.getAij().transpose() * omega * edge.getBij();
-                ls.H.block<3, 3>(3*j, 3*i) += edge.getBij().transpose() * omega * edge.getAij();
-                ls.H.block<3, 3>(3*j, 3*j) += edge.getBij().transpose() * omega * edge.getBij();
-
-                ls.b.block<3, 1>(3*i, 0) += edge.getAij().transpose() * omega * edge.getErrorVector();
-                ls.b.block<3, 1>(3*j, 0) += edge.getBij().transpose() * omega * edge.getErrorVector();
-            }
-        }
-        // Keep the first node fixed.
-        ls.H.block<3, 3>(0, 0) += Eigen::Matrix3d::Identity();
+        buildLinearSystem(ls, node1.nodeId, node2.nodeId);
 
         /** @brief Sparse solver. */
         ls.HSparse = ls.H.sparseView();
@@ -199,8 +198,11 @@ void PoseGraph::optimizeGraph(const GraphNode &node1, const GraphNode &node2)
             converged = true;
         }
     }
-    /** @todo Recover the information matrix H from the HSparse. */
-    getInformationMatrix(ls.HSparse);
+
+    // Linearize once more at the final optimized poses before computing covariance.
+    buildLinearSystem(ls, node1.nodeId, node2.nodeId);
+    ls.HSparse = ls.H.sparseView();
+    updateMarginalCovariances(ls, node1.nodeId, node2.nodeId);
 
     // Setting the condition false, for the next optimization loop.
     converged = false;
@@ -233,12 +235,74 @@ void PoseGraph::updateGraphConstraints()
     }
 }
 
+void PoseGraph::buildLinearSystem(LinearSystem& ls, uint nodeId1, uint nodeId2)
+{
+    ls.H = Eigen::MatrixXd::Zero(ls.dimension, ls.dimension);
+    ls.b = Eigen::VectorXd::Zero(ls.dimension);
+
+    for (auto& edge : graphConstraints)
+    {
+        // We only optimize constraints whose two nodes are inside the selected interval.
+        if (edge.i >= nodeId1 && edge.j <= nodeId2)
+        {
+            edge.linearizeConstraint();
+            uint i = edge.i-nodeId1;
+            uint j = edge.j-nodeId1;
+            ls.H.block<3, 3>(3*i, 3*i) += edge.getAij().transpose() * omega * edge.getAij();
+            ls.H.block<3, 3>(3*i, 3*j) += edge.getAij().transpose() * omega * edge.getBij();
+            ls.H.block<3, 3>(3*j, 3*i) += edge.getBij().transpose() * omega * edge.getAij();
+            ls.H.block<3, 3>(3*j, 3*j) += edge.getBij().transpose() * omega * edge.getBij();
+
+            ls.b.block<3, 1>(3*i, 0) += edge.getAij().transpose() * omega * edge.getErrorVector();
+            ls.b.block<3, 1>(3*j, 0) += edge.getBij().transpose() * omega * edge.getErrorVector();
+        }
+    }
+
+    // Keep the first node fixed and remove the global reference-frame ambiguity.
+    ls.H.block<3, 3>(0, 0) += Eigen::Matrix3d::Identity();
+}
+
+void PoseGraph::updateMarginalCovariances(
+        LinearSystem& ls,
+        uint nodeId1,
+        uint nodeId2)
+{
+    informationMatrix = ls.HSparse;
+    for (uint nodeId = nodeId1; nodeId <= nodeId2; nodeId++)
+    {
+        graphNodes[nodeId].clearMarginalCovariance();
+    }
+
+    ls.solver.compute(informationMatrix);
+    if (ls.solver.info() != Eigen::Success)
+    {
+        std::cout << "Decomposition failed while computing marginal covariances." << std::endl;
+        return;
+    }
+
+    for (uint nodeId = nodeId1; nodeId <= nodeId2; nodeId++)
+    {
+        uint localNodeId = nodeId-nodeId1;
+        Eigen::MatrixXd selector = Eigen::MatrixXd::Zero(ls.dimension, 3);
+        selector.block<3, 3>(3*localNodeId, 0) = Eigen::Matrix3d::Identity();
+
+        Eigen::MatrixXd covarianceColumns = ls.solver.solve(selector);
+        if (ls.solver.info() != Eigen::Success)
+        {
+            std::cout << "Solving failed while computing marginal covariance for node "
+                      << nodeId << "." << std::endl;
+            return;
+        }
+
+        const Eigen::Matrix3d covariance =
+                covarianceColumns.block<3, 3>(3*localNodeId, 0);
+        const Eigen::Matrix3d symmetricCovariance =
+                0.5 * (covariance + covariance.transpose());
+        graphNodes[nodeId].setMarginalCovariance(symmetricCovariance);
+    }
+}
+
 Pose2D PoseGraph::getCorrectingPose() const
 {
     return correctingPose;
-}
-
-void PoseGraph::getInformationMatrix(Eigen::SparseMatrix<double> HSparse)
-{
-    
 }

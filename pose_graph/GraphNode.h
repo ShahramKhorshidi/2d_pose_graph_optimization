@@ -16,6 +16,8 @@ struct GraphNode
     Pose2D nodePose;
     Pose2D initPose;
     Eigen::Matrix3d covariance = Eigen::Matrix3d::Zero();
+    Eigen::Matrix3d marginalCovariance = Eigen::Matrix3d::Zero();
+    bool marginalCovarianceAvailable = false;
 
     void setCovariance(const Eigen::Matrix3d& nodeCovariance)
     {
@@ -25,6 +27,28 @@ struct GraphNode
     Eigen::Matrix3d getCovariance() const
     {
         return covariance;
+    }
+
+    void setMarginalCovariance(const Eigen::Matrix3d& nodeMarginalCovariance)
+    {
+        marginalCovariance = nodeMarginalCovariance;
+        marginalCovarianceAvailable = true;
+    }
+
+    Eigen::Matrix3d getMarginalCovariance() const
+    {
+        return marginalCovariance;
+    }
+
+    bool hasMarginalCovariance() const
+    {
+        return marginalCovarianceAvailable;
+    }
+
+    void clearMarginalCovariance()
+    {
+        marginalCovariance = Eigen::Matrix3d::Zero();
+        marginalCovarianceAvailable = false;
     }
 };
 

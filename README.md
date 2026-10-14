@@ -116,10 +116,10 @@ This constraint covariance is defined in `PoseGraph::init()` and represents the 
 
 ### Node Pose Covariance
 
-Each `GraphNode` stores a $3\times3$ covariance $P_i$ for the pose components $[x_i,y_i,\theta_i]^T$:
+Each `GraphNode` stores a user-supplied $3\times3$ covariance $C_i$ for the pose components $[x_i,y_i,\theta_i]^T$:
 
 $$
-P_i =
+C_i =
 \begin{bmatrix}
 \sigma_{x_i}^{2} & \sigma_{x_i y_i} & \sigma_{x_i\theta_i} \\
 \sigma_{x_i y_i} & \sigma_{y_i}^{2} & \sigma_{y_i\theta_i} \\
@@ -141,7 +141,7 @@ poseGraph.addOdomNode(odomPose, nodeCovariance);
 The prior node accepts a covariance in the same way with `addPriorNode(priorPose, nodeCovariance)` or `PoseGraph poseGraph(priorPose, nodeCovariance)`. When the covariance argument is omitted, as in the example program, the node receives the common default
 
 $$
-P_{\mathrm{default}} =
+C_{\mathrm{default}} =
 \mathrm{diag}\left((0.15\,\mathrm{m})^2,
                     (0.15\,\mathrm{m})^2,
                     (0.2\,\mathrm{rad})^2\right).
@@ -154,13 +154,34 @@ poseGraph.setNodeCovariance(nodeId, nodeCovariance);
 Eigen::Matrix3d savedCovariance = poseGraph.getNodeCovariance(nodeId);
 ```
 
-The stored matrix represents covariance supplied by the user or another estimator. It is not automatically updated during graph optimization and does not replace the constraint information matrix $\Omega$. Around an optimized solution, the approximate covariance of the complete trajectory would be
+The stored matrix returned by `getNodeCovariance()` represents covariance supplied by the user or another estimator. It is not changed during graph optimization and does not replace the constraint information matrix $\Omega$.
+
+After optimization, the graph is linearized once more at the final poses. The resulting sparse Hessian is stored as the information matrix $H$ and can be accessed with:
+
+```cpp
+const Eigen::SparseMatrix<double>& H = poseGraph.getInformationMatrix();
+```
+
+Its rows and columns follow the node order of the most recently optimized interval. After fixing the reference pose, the approximate covariance of that optimized state is
 
 $$
 P \approx H^{-1},
 $$
 
-after fixing the reference pose. The posterior marginal covariance of node $i$ would be its corresponding $3\times3$ diagonal block. This automatic marginal-covariance calculation is not implemented yet because `PoseGraph::getInformationMatrix()` is still empty.
+and the posterior marginal covariance of node $i$ is the corresponding diagonal block
+
+$$
+P_i \approx \left[H^{-1}\right]_{ii}.
+$$
+
+The implementation obtains this block with the sparse Cholesky solver instead of constructing a dense inverse. It is stored separately from the user-supplied covariance and can be read after the node has been optimized:
+
+```cpp
+Eigen::Matrix3d marginalCovariance =
+    poseGraph.getMarginalCovariance(nodeId);
+```
+
+Calling `getMarginalCovariance()` for a node that has not yet been included in an optimization throws `std::logic_error`.
 
 ### Linearization and Sparse System
 
@@ -216,7 +237,7 @@ The first pose is fixed to remove the global reference-frame ambiguity. Because 
 
 - `pose_graph/GraphConstraint` stores the connected node IDs and relative-pose observation, and computes $e_{ij}$, $A_{ij}$ and $B_{ij}$.
 
-- `pose_graph/PoseGraph` adds nodes and constraints, assembles the linear system, fixes the first pose, solves for $\Delta x$ and updates the graph.
+- `pose_graph/PoseGraph` adds nodes and constraints, assembles the linear system, fixes the first pose, solves for $\Delta x$, stores the final sparse information matrix and computes node marginal covariances.
 
 - `example/main.cpp` reads the HSR trajectory, inserts the loop closing constraint between nodes 9 and 261, runs the optimization and displays the result.
 
