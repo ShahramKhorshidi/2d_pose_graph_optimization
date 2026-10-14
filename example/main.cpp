@@ -20,11 +20,14 @@ int main(int argc, char *argv[]) {
     QGraphicsScene scene;
     scene.setSceneRect(-400, -1400, 1000, 1600); // Set scene size
 
+    // The example data is copied next to the executable by CMake
+    std::filesystem::path exampleDir = QCoreApplication::applicationDirPath().toStdString();
+    std::filesystem::path trajectoryPath = exampleDir / "robot_trajectory.log";
+
     // Read trajectory data from a file
-    std::string pathToDir = "/home/path-to-the-repo"; // CHANGE the path to the repo directory here
-    std::ifstream inputFile(pathToDir + "/pose_graph_optimization/example/robot_trajectory.log");
+    std::ifstream inputFile(trajectoryPath);
     if (!inputFile.is_open()) {
-        std::cerr << "Error opening input file" << std::endl;
+        std::cerr << "Error opening trajectory file: " << trajectoryPath << std::endl;
         return -1;
     }
 
@@ -35,10 +38,8 @@ int main(int argc, char *argv[]) {
     }
 
     // Load an image for the robot
-    std::string path1 = pathToDir + "/pose_graph_optimization/example/robot_image_red.png";
-    std::string path2 = pathToDir + "/pose_graph_optimization/example/robot_image_green.png";
-    QPixmap robotImageRed(path1.c_str());
-    QPixmap robotImageGreen(path2.c_str());
+    QPixmap robotImageRed((exampleDir / "robot_image_red.png").c_str());
+    QPixmap robotImageGreen((exampleDir / "robot_image_green.png").c_str());
 
     // Create a QElapsedTimer to measure time
     QElapsedTimer timer;
