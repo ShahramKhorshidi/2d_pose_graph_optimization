@@ -48,6 +48,12 @@ The recorded trajectory was collected from a Toyota Human Support Robot (HSR) mo
 
 The animation speed is controlled by `trajectoryDelayMs` near the beginning of `example/main.cpp`. Its value is the delay between two poses in milliseconds. Increase it to make the robot move slower or decrease it to make the robot move faster. `loopClosingPauseMs` controls how long the animation stops when the loop closure is detected.
 
+<p align="center">
+  <img src="docs/robot_visualization.gif"
+       alt="HSR pose graph optimization and loop closing demo"
+       width="600">
+</p>
+
 ## Framework
 
 ### Code Structure
