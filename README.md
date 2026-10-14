@@ -102,14 +102,14 @@ $$
 The current implementation uses the same diagonal covariance for all odometry and loop closing constraints:
 
 $$
-\Sigma = \operatorname{diag}\left((0.15\,\mathrm{m})^2,
+\Sigma = \mathrm{diag}\left((0.15\,\mathrm{m})^2,
                                    (0.15\,\mathrm{m})^2,
                                    (0.2\,\mathrm{rad})^2\right),
 $$
 
 $$
 \Omega = \Sigma^{-1}
-       = \operatorname{diag}(44.44,44.44,25).
+       = \mathrm{diag}(44.44,44.44,25).
 $$
 
 This covariance is defined in `PoseGraph::init()` and represents the uncertainty of a relative-pose measurement. It is not a covariance assigned to each graph node. Although `GraphConstraint` currently declares an `omega` member, the optimizer assembles the system using the common `PoseGraph::omega`; therefore, constraint-specific covariance is not active in the current implementation.
