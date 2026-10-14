@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
         "<span style='color:#1a9641;'>&#9679;</span> Green: after loop closing");
     legend->setStyleSheet(
         "QLabel { background-color: rgba(255, 255, 255, 220); "
-        "border: 1px solid gray; padding: 6px; }");
+        "border: 2px solid gray; padding: 12px; font-size: 24px; }");
     legend->adjustSize();
     legend->setAttribute(Qt::WA_TransparentForMouseEvents);
     windowLayout->addWidget(legend, 0, 0, Qt::AlignTop | Qt::AlignLeft);
