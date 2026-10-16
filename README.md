@@ -255,6 +255,6 @@ The first pose is fixed to remove the global reference-frame ambiguity. Because 
 
 ## References
 
-[1] G. Grisetti, R. Kümmerle, C. Stachniss and W. Burgard, "A Tutorial on Graph-Based SLAM," IEEE Intelligent Transportation Systems Magazine, 2010. [DOI: 10.1109/MITS.2010.939925](https://doi.org/10.1109/MITS.2010.939925)
+[1] G. Grisetti, R. Kümmerle, C. Stachniss and W. Burgard, "A Tutorial on Graph-Based SLAM," IEEE Intelligent Transportation Systems Magazine, 2010. [paper](http://ais.informatik.uni-freiburg.de/teaching/ws11/robotics2/pdfs/ls-slam-tutorial.pdf), [doi](https://doi.org/10.1109/MITS.2010.939925).
 
-[2] K. Konolige, G. Grisetti, R. Kümmerle, W. Burgard, B. Limketkai and R. Vincent, "Efficient Sparse Pose Adjustment for 2D Mapping," IEEE/RSJ International Conference on Intelligent Robots and Systems, 2010. [DOI: 10.1109/IROS.2010.5649043](https://doi.org/10.1109/IROS.2010.5649043)
+[2] K. Konolige, G. Grisetti, R. Kümmerle, W. Burgard, B. Limketkai and R. Vincent, "Efficient Sparse Pose Adjustment for 2D Mapping," IEEE/RSJ International Conference on Intelligent Robots and Systems, 2010. [paper](https://vigir.missouri.edu/~gdesouza/Research/Conference_CDs/IEEE_IROS_2010/data/papers/0644.pdf), [doi](https://doi.org/10.1109/IROS.2010.5649043).
