@@ -21,12 +21,10 @@ Qt Creator is optional and can be used as an IDE, but it is not required to buil
 
 ### Source Code
 
-The source code is hosted on GitHub: [ShahramKhorshidi/pose_graph_optimization](https://github.com/ShahramKhorshidi/pose_graph_optimization)
-
 ```
-# Clone pose_graph_optimization
-git clone https://github.com/ShahramKhorshidi/pose_graph_optimization.git
-cd pose_graph_optimization
+# Clone 2d_pose_graph_optimization
+git clone https://github.com/ShahramKhorshidi/2d_pose_graph_optimization.git
+cd 2d_pose_graph_optimization
 ```
 
 ### Build
